@@ -13,19 +13,30 @@ import java.io.File;
 import java.io.IOException;
 
 @RestController
-@RequestMapping("api/IB")
+@RequestMapping("api/IB/private")
 public class BranchRS {
 
-    @RequestMapping(value = "/populateData", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ObjectNode fetchDetails(@RequestBody JSONObject requestBody) throws IOException {
+    @RequestMapping(value = "/populateData", method = RequestMethod.POST,
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ObjectNode fetchDetails(@RequestBody ObjectNode requestBody) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode root = mapper.createObjectNode();
-        root = mapper.readValue(new ProviderImpl().dataProvider().toString(), ObjectNode.class);
-        mapper.writeValue(new File("src\\main\\resources\\static\\IBAllBranchDetails.json"), root);
+        JSONObject data = new ProviderImpl().dataProvider(requestBody);
+        if(data == null) {
+            root.put("status", "error");
+            root.put("message", "An error occured");
+            return root;
+        }
+        return this.writeJsonFile(mapper, data.toString());
+    }
 
+    private ObjectNode writeJsonFile(ObjectMapper mapper, String data) throws IOException {
+        ObjectNode root = mapper.readValue(data, ObjectNode.class);
+        mapper.writeValue(new File("src\\main\\resources\\static\\IBAllBranchDetails.json"), root);
         root.removeAll();
         root.put("status", "success");
         root.put("message", "JSON file created successfully");
         return root;
     }
+
 }

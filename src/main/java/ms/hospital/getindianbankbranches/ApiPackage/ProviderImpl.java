@@ -1,5 +1,11 @@
 package ms.hospital.getindianbankbranches.ApiPackage;
 
+import com.fasterxml.jackson.core.exc.StreamReadException;
+import com.fasterxml.jackson.databind.DatabindException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.json.JSONArray;
@@ -7,16 +13,31 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 public class ProviderImpl {
-    protected JSONObject dataProvider() throws IOException {
-        String EXCEL_FILE_PATH = "src\\main\\resources\\static\\IBAllBranchDetails.xls";
-        InputStream inputStream = new FileInputStream(EXCEL_FILE_PATH);
+
+    private final String EXCEL_FILE_PATH = "src\\main\\resources\\static\\IBAllBranchDetails.xls";
+    private final String JSON_FILE_PATH = "src\\main\\resources\\static\\IBAllBranchDetails.json";
+    protected JSONObject dataProvider(ObjectNode request) throws IOException {
+        if(!this.validateUserId(request)) return null;
+        return this.convertExcelDataToJson();
+    }
+
+    private boolean validateUserId(ObjectNode request){
+        return request.get("userId").toString().equals("\"A1179\"");
+    }
+
+    private JSONObject convertExcelDataToJson() throws IOException{
+        InputStream inputStream = this.readFile(EXCEL_FILE_PATH);
         Workbook workbook = new HSSFWorkbook(inputStream);
         Sheet sheet = workbook.getSheetAt(0);
 
@@ -42,5 +63,49 @@ public class ProviderImpl {
             dataArray.put(dataObj);
         }
         return new JSONObject().put("data", dataArray);
+    }
+
+    protected JSONObject getUniqueZones(){
+        JSONArray data = this.readJsonData();
+        if(data == null) return null;
+
+        List<String> zones = IntStream.range(0, data.length())
+                .mapToObj(i -> data.getJSONObject(i))
+                .map(obj -> obj.getString("Zone"))
+                .collect(Collectors.toSet())    // created a set to carry only unique zones
+                .stream().sorted().toList();
+
+
+        return new JSONObject().put("zones", zones);
+    }
+
+    protected JSONObject fetchBranchData(String zone){
+        JSONArray data = this.readJsonData();
+        if(data == null) return null;
+
+        JSONArray zoneData = new JSONArray();
+        IntStream.range(0, data.length())
+                .filter(i -> data.getJSONObject(i).get("Zone").toString().toLowerCase().contains(zone.toLowerCase()))
+                .forEach(i -> zoneData.put(data.getJSONObject(i)));
+
+        return new JSONObject().put("branchData", zoneData);
+    }
+
+    private JSONArray readJsonData(){
+        try {
+            InputStream inputStream = this.readFile(JSON_FILE_PATH);
+            ObjectNode node = new ObjectMapper().readValue(inputStream, ObjectNode.class);
+            JSONObject bankDetails = new JSONObject(node.toString());
+            JSONArray data = bankDetails.getJSONArray("data");
+            return data;
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private InputStream readFile(String path) throws FileNotFoundException {
+        return new FileInputStream(path);
     }
 }
