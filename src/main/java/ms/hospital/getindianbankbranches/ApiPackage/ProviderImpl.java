@@ -1,11 +1,7 @@
 package ms.hospital.getindianbankbranches.ApiPackage;
 
-import com.fasterxml.jackson.core.exc.StreamReadException;
-import com.fasterxml.jackson.databind.DatabindException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.json.JSONArray;
@@ -73,7 +69,7 @@ public class ProviderImpl {
                 .mapToObj(i -> data.getJSONObject(i))
                 .map(obj -> obj.getString("Zone"))
                 .collect(Collectors.toSet())    // created a set to carry only unique zones
-                .stream().sorted().toList();
+                .stream().sorted().collect(Collectors.toList());
 
 
         return new JSONObject().put("zones", zones);
