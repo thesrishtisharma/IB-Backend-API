@@ -84,6 +84,7 @@
                 <configuration>
                     <source>11</source>  <!-- Java source version -->
                     <target>11</target>  <!-- Java target version -->
+                    <release>11</release> <!-- Use this for JDK 9+ to ensure API compatibility -->
                 </configuration>
             </plugin>
             <plugin>
